@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CivicBridge Feature Prioritization</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ========== REPLACE THIS URL ========== */
+  /* See google_apps_script.js for setup    */
+  /* ====================================== */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f8fafc;
+    color: #111827;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app { width: 100%; max-width: 640px; }
+
+  /* Intro */
+  .intro { max-width: 520px; margin: 48px auto; text-align: center; }
+  .intro h1 { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 12px; }
+  .product-overview {
+    font-size: 15px; color: #374151; line-height: 1.7; text-align: left;
+    background: #f0f4ff; border-radius: 10px; padding: 16px 20px;
+    border-left: 3px solid #1d4ed8; margin-bottom: 16px;
+  }
+  .intro .subtitle { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 8px; }
+  .feature-count { font-size: 13px; color: #9ca3af; margin-top: 12px; }
+  .name-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin: 20px 0 6px; text-align: left; }
+  .name-input {
+    width: 100%; padding: 10px 14px; border: 1px solid #d1d5db;
+    border-radius: 8px; font-size: 15px; font-family: inherit; outline: none;
+  }
+  .name-input:focus { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29,78,216,.12); }
+
+  /* Buttons */
+  .btn {
+    display: inline-block; padding: 10px 22px; font-size: 14px; font-weight: 600;
+    color: #fff; background: #1d4ed8; border: none; border-radius: 8px;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+    transition: background .15s, opacity .15s;
+  }
+  .btn:hover { background: #1e40af; }
+  .btn.secondary { background: #374151; }
+  .btn.secondary:hover { background: #1f2937; }
+  .btn.success { background: #059669; }
+  .btn.muted { background: #6b7280; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.start { margin-top: 28px; padding: 12px 32px; font-size: 15px; }
+
+  /* Progress */
+  .progress-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .progress-label { font-size: 12px; color: #6b7280; font-weight: 500; }
+  .progress-bar { height: 4px; background: #e5e7eb; border-radius: 2px; margin-bottom: 28px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #1d4ed8; border-radius: 2px; transition: width .3s ease; }
+
+  /* Feature card */
+  .feature-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 24px 28px; margin-bottom: 24px;
+  }
+  .feature-num { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: #9ca3af; text-transform: uppercase; margin-bottom: 8px; }
+  .feature-name { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .feature-desc { font-size: 14px; color: #4b5563; line-height: 1.6; }
+
+  /* Question blocks */
+  .question-block { margin-bottom: 24px; }
+  .question-label { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  .question-label .green { color: #059669; }
+  .question-label .red { color: #dc2626; }
+  .option-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .option-btn {
+    padding: 8px 16px; font-size: 13px; font-weight: 500; color: #374151;
+    background: #fff; border: 1.5px solid #d1d5db; border-radius: 8px;
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .option-btn:hover { border-color: #9ca3af; }
+  .option-btn.selected { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+
+  /* Navigation */
+  .nav-row { display: flex; align-items: center; justify-content: space-between; margin-top: 32px; gap: 12px; }
+  .dot-row { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%; border: none;
+    cursor: pointer; padding: 0; transition: background .15s;
+  }
+
+  /* Results */
+  .results-wrap { max-width: 800px; width: 100%; margin: 0 auto; }
+  .results-badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    color: #1d4ed8; background: #eff6ff; border-radius: 4px; padding: 4px 12px; margin-bottom: 16px;
+  }
+  .results-title { font-size: 24px; font-weight: 700; margin-bottom: 20px; }
+  .cat-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
+  .cat-pill {
+    display: flex; align-items: center; gap: 6px; padding: 6px 14px;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 13px;
+  }
+  .cat-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .cat-pill-label { font-weight: 600; color: #374151; }
+  .cat-pill-count { color: #9ca3af; font-weight: 500; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    text-align: left; padding: 10px 12px; border-bottom: 2px solid #e5e7eb;
+    font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .5px;
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  .cat-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; }
+
+  .btn-row { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
+
+  /* Thank you screen */
+  .thank-you { text-align: center; margin: 80px auto; max-width: 480px; }
+  .thank-you .check { font-size: 48px; margin-bottom: 16px; }
+  .thank-you h2 { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
+  .thank-you p { font-size: 15px; color: #4b5563; line-height: 1.6; }
+
+  /* Submitting overlay */
+  .submit-overlay {
+    position: fixed; inset: 0; background: rgba(248,250,252,.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; backdrop-filter: blur(2px);
+  }
+  .submit-box { text-align: center; }
+  .spinner {
+    width: 32px; height: 32px; border: 3px solid #e5e7eb;
+    border-top-color: #1d4ed8; border-radius: 50%;
+    animation: spin .7s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ============================================================
+// CONFIG — paste your Google Apps Script URL here
+// ============================================================
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHpDKZFUgPc2Zcv17XQgdIBeZLU7xpAlC28lYbaaRXOmPn8FQailaDGTFPFrM9yQk8/exec";
+// ============================================================
+
+const FEATURES = [
+  { id: 1, name: "Write once, publish everywhere", description: "You enter the core message once and the system generates versions for each channel (social post, email, press release, website blurb, mailer draft), each formatted appropriately for that platform." },
+  { id: 2, name: "Human review before publish", description: "Nothing goes out without a person reviewing and approving. You can edit any output before it's sent." },
+  { id: 3, name: "Auto-logged comms timeline", description: "Every message that goes out gets automatically recorded — what was sent, to which channel, and when — so you have a complete history per project without maintaining it manually." },
+  { id: 4, name: "ADA-accessible project page", description: "Each project automatically gets a public-facing page written in plain language that meets ADA accessibility standards, serving as the canonical link for all outbound messages." },
+  { id: 5, name: "Channel selection per message", description: "You choose which channels each message goes to (e.g., social + email but not press release this time). Not everything goes everywhere every time." },
+  { id: 6, name: "Source-of-truth linking", description: "Every social post, email, and press release automatically includes a link back to the project page so constituents always have one place to go for full details." },
+  { id: 7, name: "Basic engagement metrics", description: "For each message, you can see basic signals: project page views, email opens, social reach. Not a full analytics suite — just enough to know if people saw it." },
+  { id: 8, name: "Suggested stakeholder lists", description: "Based on the type of project (capital, policy change) and location, the system suggests who should be notified — affected neighborhoods, relevant council members, partner agencies." },
+  { id: 9, name: "Physical channel outputs", description: "The system generates print-ready drafts for physical channels — mailer postcards, door hangers, flyers — formatted for print, not just digital." },
+  { id: 10, name: "Scheduled publishing", description: "You can schedule messages to go out at a specific date and time, and see a calendar view of what's going out across departments so comms don't collide." },
+  { id: 11, name: "Roles and permissions", description: "Multiple departments can use the tool with defined roles — who can draft, who can approve, who can publish — so there's governance without bottlenecks." },
+  { id: 12, name: "Constituent comment intake", description: "Each project page includes a structured form where residents can submit questions or concerns. Comments go to staff (not visible publicly) and are tied to the project with a resolution log." },
+  { id: 13, name: "Voice and tone matching", description: "The system learns your team's communication style and applies it across outputs so messages sound like your team, not a bot." },
+  { id: 14, name: "Multilingual output", description: "The system generates translated versions of your message in relevant languages for your community, ready to publish alongside the English version." },
+  { id: 15, name: "Council transcript scanner", description: "The system watches publicly available council meeting transcripts and minutes, surfaces items that may need public communication, and gives you a queue to review." },
+];
+
+const FUNCTIONAL_ANSWERS = [
+  { value: "like", label: "I like it" },
+  { value: "expect", label: "I expect it" },
+  { value: "neutral", label: "I'm neutral" },
+  { value: "tolerate", label: "I can tolerate it" },
+  { value: "dislike", label: "I dislike it" },
+];
+
+const DYSFUNCTIONAL_ANSWERS = [
+  { value: "like", label: "I prefer not to have it" },
+  { value: "expect", label: "I expect not to have it" },
+  { value: "neutral", label: "I'm neutral" },
+  { value: "tolerate", label: "I can tolerate not having it" },
+  { value: "dislike", label: "I dislike not having it" },
+];
+
+const KANO_TABLE = {
+  like:     { like: "Q", expect: "A", neutral: "A", tolerate: "A", dislike: "O" },
+  expect:   { like: "R", expect: "I", neutral: "I", tolerate: "I", dislike: "M" },
+  neutral:  { like: "R", expect: "I", neutral: "I", tolerate: "I", dislike: "M" },
+  tolerate: { like: "R", expect: "I", neutral: "I", tolerate: "I", dislike: "M" },
+  dislike:  { like: "R", expect: "R", neutral: "R", tolerate: "R", dislike: "Q" },
+};
+
+const CATEGORY_META = {
+  M: { label: "Must-be", color: "#c0392b" },
+  O: { label: "One-dimensional", color: "#2980b9" },
+  A: { label: "Attractive", color: "#27ae60" },
+  I: { label: "Indifferent", color: "#7f8c8d" },
+  R: { label: "Reverse", color: "#8e44ad" },
+  Q: { label: "Questionable", color: "#e67e22" },
+};
+
+// ---- State ----
+let state = {
+  screen: "intro", // intro | survey | results | thanks
+  currentFeature: 0,
+  respondentName: "",
+  responses: {},    // { [featureId]: { functional, dysfunctional } }
+  submitting: false,
+};
+
+function getResp(id) { return state.responses[id] || {}; }
+function countAnswered() {
+  return Object.values(state.responses).filter(r => r.functional && r.dysfunctional).length;
+}
+function classify(func, dysfunc) {
+  return (KANO_TABLE[func] && KANO_TABLE[func][dysfunc]) || "Q";
+}
+
+// ---- Render engine ----
+const app = document.getElementById("app");
+
+function render() {
+  switch (state.screen) {
+    case "intro": return renderIntro();
+    case "survey": return renderSurvey();
+    case "results": return renderResults();
+    case "thanks": return renderThanks();
+  }
+}
+
+function renderIntro() {
+  app.innerHTML = `
+    <div class="intro">
+      <h1>CivicBridge Feature Prioritization</h1>
+      <div class="product-overview">
+        CivicBridge is a write-once, publish-everywhere communications tool for municipal governments. Staff enter a core message once and the system generates channel-ready versions for social media, email, press releases, website pages, and print materials, so residents stay informed without adding hours to already-stretched teams.
+      </div>
+      <p class="subtitle">
+        We're exploring which capabilities should be part of this tool. For each feature below, you'll answer two questions: how you'd feel <em>with</em> the feature, and how you'd feel <em>without</em> it. There are no right or wrong answers.
+      </p>
+      <div class="feature-count">${FEATURES.length} features to evaluate</div>
+      <label class="name-label">Your name (optional)</label>
+      <input class="name-input" id="nameInput" placeholder="e.g. Jane from Public Works" value="${esc(state.respondentName)}">
+      <br>
+      <button class="btn start" id="startBtn">Begin Survey &rarr;</button>
+    </div>
+  `;
+  document.getElementById("nameInput").addEventListener("input", e => { state.respondentName = e.target.value; });
+  document.getElementById("startBtn").addEventListener("click", () => { state.screen = "survey"; render(); });
+}
+
+function renderSurvey() {
+  const f = FEATURES[state.currentFeature];
+  const r = getResp(f.id);
+  const answered = countAnswered();
+  const canAdvance = r.functional && r.dysfunctional;
+  const isLast = state.currentFeature === FEATURES.length - 1;
+
+  app.innerHTML = `
+    <div class="progress-row">
+      <span class="progress-label">Feature ${state.currentFeature + 1} of ${FEATURES.length}</span>
+      <span class="progress-label">${answered} answered</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${(answered / FEATURES.length) * 100}%"></div></div>
+
+    <div class="feature-card">
+      <div class="feature-num">Feature ${f.id}</div>
+      <div class="feature-name">${esc(f.name)}</div>
+      <div class="feature-desc">${esc(f.description)}</div>
+    </div>
+
+    <div class="question-block">
+      <div class="question-label">If this feature <span class="green">existed</span>, how would you feel?</div>
+      <div class="option-grid" id="funcGrid">
+        ${FUNCTIONAL_ANSWERS.map(a =>
+          `<button class="option-btn${r.functional === a.value ? " selected" : ""}" data-value="${a.value}">${esc(a.label)}</button>`
+        ).join("")}
+      </div>
+    </div>
+
+    <div class="question-block">
+      <div class="question-label">If this feature <span class="red">did NOT exist</span>, how would you feel?</div>
+      <div class="option-grid" id="dysfuncGrid">
+        ${DYSFUNCTIONAL_ANSWERS.map(a =>
+          `<button class="option-btn${r.dysfunctional === a.value ? " selected" : ""}" data-value="${a.value}">${esc(a.label)}</button>`
+        ).join("")}
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn secondary" id="prevBtn" ${state.currentFeature === 0 ? "disabled" : ""}>&larr; Previous</button>
+      <div class="dot-row" id="dotRow">
+        ${FEATURES.map((feat, i) => {
+          const fr = getResp(feat.id);
+          const done = fr.functional && fr.dysfunctional;
+          const bg = i === state.currentFeature ? "#1d4ed8" : done ? "#059669" : "#d1d5db";
+          return `<button class="dot" data-idx="${i}" style="background:${bg}" title="${esc(feat.name)}"></button>`;
+        }).join("")}
+      </div>
+      ${isLast
+        ? `<button class="btn ${answered === FEATURES.length ? "success" : "muted"}" id="resultsBtn">See Results</button>`
+        : `<button class="btn" id="nextBtn" style="opacity:${canAdvance ? 1 : .5}">Next &rarr;</button>`
+      }
+    </div>
+  `;
+
+  // Bind functional buttons
+  document.getElementById("funcGrid").addEventListener("click", e => {
+    const btn = e.target.closest("[data-value]");
+    if (!btn) return;
+    if (!state.responses[f.id]) state.responses[f.id] = {};
+    state.responses[f.id].functional = btn.dataset.value;
+    render();
+  });
+
+  // Bind dysfunctional buttons
+  document.getElementById("dysfuncGrid").addEventListener("click", e => {
+    const btn = e.target.closest("[data-value]");
+    if (!btn) return;
+    if (!state.responses[f.id]) state.responses[f.id] = {};
+    state.responses[f.id].dysfunctional = btn.dataset.value;
+    render();
+  });
+
+  // Nav
+  document.getElementById("prevBtn")?.addEventListener("click", () => {
+    if (state.currentFeature > 0) { state.currentFeature--; render(); }
+  });
+  document.getElementById("nextBtn")?.addEventListener("click", () => {
+    if (state.currentFeature < FEATURES.length - 1) { state.currentFeature++; render(); }
+  });
+  document.getElementById("resultsBtn")?.addEventListener("click", () => {
+    state.screen = "results"; render();
+  });
+
+  // Dots
+  document.getElementById("dotRow").addEventListener("click", e => {
+    const dot = e.target.closest("[data-idx]");
+    if (!dot) return;
+    state.currentFeature = parseInt(dot.dataset.idx);
+    render();
+  });
+}
+
+function getClassifiedResults() {
+  return FEATURES.map(f => {
+    const r = getResp(f.id);
+    if (!r.functional || !r.dysfunctional) return null;
+    return { ...f, functional: r.functional, dysfunctional: r.dysfunctional, category: classify(r.functional, r.dysfunctional) };
+  }).filter(Boolean);
+}
+
+function renderResults() {
+  const results = getClassifiedResults();
+  const catOrder = { M: 0, O: 1, A: 2, I: 3, R: 4, Q: 5 };
+  results.sort((a, b) => (catOrder[a.category] ?? 9) - (catOrder[b.category] ?? 9));
+
+  // Category summary counts
+  const counts = {};
+  results.forEach(r => { counts[r.category] = (counts[r.category] || 0) + 1; });
+
+  app.innerHTML = `
+    <div class="results-wrap">
+      <div class="results-badge">RESULTS</div>
+      <h2 class="results-title">Kano Classification${state.respondentName ? " — " + esc(state.respondentName) : ""}</h2>
+
+      <div class="cat-summary">
+        ${["M","O","A","I","R","Q"].map(cat => {
+          if (!counts[cat]) return "";
+          return `<div class="cat-pill">
+            <span class="cat-dot" style="background:${CATEGORY_META[cat].color}"></span>
+            <span class="cat-pill-label">${CATEGORY_META[cat].label}</span>
+            <span class="cat-pill-count">${counts[cat]}</span>
+          </div>`;
+        }).join("")}
+      </div>
+
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th style="width:40%">Feature</th>
+            <th>Category</th>
+            <th>Functional</th>
+            <th>Dysfunctional</th>
+          </tr></thead>
+          <tbody>
+            ${results.map(r => `
+              <tr>
+                <td>${esc(r.name)}</td>
+                <td><span class="cat-tag" style="background:${CATEGORY_META[r.category].color}">${CATEGORY_META[r.category].label}</span></td>
+                <td style="font-size:13px;color:#6b7280">${FUNCTIONAL_ANSWERS.find(a => a.value === r.functional)?.label || ""}</td>
+                <td style="font-size:13px;color:#6b7280">${DYSFUNCTIONAL_ANSWERS.find(a => a.value === r.dysfunctional)?.label || ""}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn secondary" id="reviewBtn">&larr; Review Answers</button>
+        <button class="btn" id="submitBtn">Submit Responses &uarr;</button>
+      </div>
+    </div>
+
+    ${state.submitting ? `
+      <div class="submit-overlay">
+        <div class="submit-box">
+          <div class="spinner"></div>
+          <div style="font-size:15px;font-weight:600;color:#374151">Submitting your responses...</div>
+        </div>
+      </div>
+    ` : ""}
+  `;
+
+  document.getElementById("reviewBtn").addEventListener("click", () => {
+    state.screen = "survey"; state.currentFeature = 0; render();
+  });
+
+  document.getElementById("submitBtn").addEventListener("click", submitToGoogleSheets);
+}
+
+function renderThanks() {
+  app.innerHTML = `
+    <div class="thank-you">
+      <div class="check">&#10003;</div>
+      <h2>Thank you!</h2>
+      <p>Your responses have been recorded. This feedback will directly shape which features make it into CivicBridge.</p>
+    </div>
+  `;
+}
+
+// ---- Submit ----
+async function submitToGoogleSheets() {
+  if (state.submitting) return;
+  if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+    alert("The survey owner hasn't configured the submission endpoint yet. Your results are shown on screen but could not be saved.");
+    return;
+  }
+
+  state.submitting = true;
+  render();
+
+  const results = getClassifiedResults();
+  const payload = {
+    respondent: state.respondentName,
+    features: FEATURES.map(f => {
+      const match = results.find(r => r.id === f.id);
+      return {
+        id: f.id,
+        name: f.name,
+        functional: match?.functional || "",
+        dysfunctional: match?.dysfunctional || "",
+        category: match ? CATEGORY_META[match.category]?.label || match.category : "",
+      };
+    }),
+  };
+
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",  // Apps Script doesn't support CORS, but the POST still lands
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(payload),
+    });
+    state.submitting = false;
+    state.screen = "thanks";
+    render();
+  } catch (err) {
+    state.submitting = false;
+    render();
+    alert("There was an error submitting. Please try again or contact the survey administrator.");
+    console.error("Submission error:", err);
+  }
+}
+
+// ---- Utility ----
+function esc(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---- Boot ----
+render();
+</script>
+</body>
+</html>
