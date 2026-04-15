@@ -73,6 +73,12 @@
   .progress-bar { height: 4px; background: #e5e7eb; border-radius: 2px; margin-bottom: 28px; overflow: hidden; }
   .progress-fill { height: 100%; background: #1d4ed8; border-radius: 2px; transition: width .3s ease; }
 
+survey-context {
+  font-size: 14px; color: #4b5563; line-height: 1.6; text-align: left;
+  background: #f0f4ff; border-radius: 10px; padding: 14px 18px;
+  border-left: 3px solid #1d4ed8; margin-bottom: 20px;
+}
+  
   /* Feature card */
   .feature-card {
     background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
@@ -343,6 +349,10 @@ function renderSurvey() {
       <span class="progress-label">${answered} answered</span>
     </div>
     <div class="progress-bar"><div class="progress-fill" style="width:${(answered / FEATURES.length) * 100}%"></div></div>
+
+<div class="survey-context">
+  Imagine a tool that lets your team write a message once and publish it everywhere: social media, email, press releases, your website, and print. For each feature below, tell us how you'd feel if the tool included it, and how you'd feel if it didn't.
+</div>
 
     <div class="feature-card">
       <div class="feature-num">Feature ${f.id}</div>
