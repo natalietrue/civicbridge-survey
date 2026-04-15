@@ -27,16 +27,25 @@
   #app { width: 100%; max-width: 640px; }
 
   /* Intro */
-  .intro { max-width: 520px; margin: 48px auto; text-align: center; }
-  .intro h1 { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 12px; }
+  .intro { max-width: 580px; margin: 40px auto; text-align: center; }
+  .intro h1 { font-size: 32px; font-weight: 700; line-height: 1.2; margin-bottom: 16px; color: #0f172a; }
   .product-overview {
-    font-size: 15px; color: #374151; line-height: 1.7; text-align: left;
-    background: #f0f4ff; border-radius: 10px; padding: 16px 20px;
-    border-left: 3px solid #1d4ed8; margin-bottom: 16px;
+    font-size: 16px; color: #1f2937; line-height: 1.7; text-align: left;
+    background: #f0f4ff; border-radius: 10px; padding: 18px 22px;
+    border-left: 3px solid #1d4ed8; margin-bottom: 20px;
   }
-  .intro .subtitle { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 8px; }
-  .feature-count { font-size: 13px; color: #9ca3af; margin-top: 12px; }
-  .name-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin: 20px 0 6px; text-align: left; }
+  .intro .subtitle { font-size: 16px; color: #374151; line-height: 1.65; margin-bottom: 8px; text-align: left; }
+  .before-you-begin {
+    text-align: left; font-size: 15px; color: #374151; line-height: 1.7;
+    margin-top: 20px; margin-bottom: 16px;
+  }
+  .before-you-begin strong { color: #1f2937; }
+  .before-you-begin ul { margin: 8px 0 0 20px; padding: 0; }
+  .before-you-begin li { margin-bottom: 6px; }
+  .contact-line { font-size: 14px; color: #6b7280; text-align: left; margin-bottom: 4px; }
+  .contact-line a { color: #1d4ed8; text-decoration: none; }
+  .contact-line a:hover { text-decoration: underline; }
+  .name-label { display: block; font-size: 14px; font-weight: 600; color: #1f2937; margin: 24px 0 6px; text-align: left; }
   .name-input {
     width: 100%; padding: 10px 14px; border: 1px solid #d1d5db;
     border-radius: 8px; font-size: 15px; font-family: inherit; outline: none;
@@ -149,7 +158,7 @@
 // ============================================================
 // CONFIG — paste your Google Apps Script URL here
 // ============================================================
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHpDKZFUgPc2Zcv17XQgdIBeZLU7xpAlC28lYbaaRXOmPn8FQailaDGTFPFrM9yQk8/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykxJ6uCs7rBipOPBR-6hkGP52KjgVkuLj81RmVNQya7rhzZNKEFKUC0OaTHkPndb_Wwg/exec";
 // ============================================================
 
 const FEATURES = [
@@ -205,6 +214,7 @@ const CATEGORY_META = {
 
 // ---- State ----
 const SECRET_RESULTS = new URLSearchParams(window.location.search).get("results") === "true";
+const SESSION_ID = "s_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 let state = {
   screen: "intro", // intro | survey | results | thanks
@@ -212,6 +222,7 @@ let state = {
   respondentName: "",
   responses: {},    // { [featureId]: { functional, dysfunctional } }
   submitting: false,
+  lastSavedCount: 0, // track when to auto-save
 };
 
 function getResp(id) { return state.responses[id] || {}; }
@@ -221,6 +232,62 @@ function countAnswered() {
 function classify(func, dysfunc) {
   return (KANO_TABLE[func] && KANO_TABLE[func][dysfunc]) || "Q";
 }
+
+// ---- Auto-save for partial completes ----
+function buildPayload(status) {
+  const results = getClassifiedResults();
+  return {
+    session_id: SESSION_ID,
+    respondent: state.respondentName,
+    status: status,  // "partial" or "complete"
+    answered_count: countAnswered(),
+    total_count: FEATURES.length,
+    features: FEATURES.map(f => {
+      const match = results.find(r => r.id === f.id);
+      return {
+        id: f.id,
+        name: f.name,
+        functional: match?.functional || "",
+        dysfunctional: match?.dysfunctional || "",
+        category: match ? CATEGORY_META[match.category]?.label || match.category : "",
+      };
+    }),
+  };
+}
+
+function autoSave() {
+  const answered = countAnswered();
+  if (answered === 0) return;
+  if (answered === state.lastSavedCount) return; // nothing new
+  if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") return;
+
+  state.lastSavedCount = answered;
+  const payload = buildPayload("partial");
+
+  // Use sendBeacon for reliability (works even on page close)
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(GOOGLE_SCRIPT_URL, JSON.stringify(payload));
+  } else {
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }
+}
+
+// Save on page close/navigate away
+window.addEventListener("beforeunload", () => {
+  if (state.screen === "thanks") return; // already submitted
+  const answered = countAnswered();
+  if (answered === 0) return;
+  if (GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") return;
+
+  const payload = buildPayload(answered === FEATURES.length ? "complete" : "partial");
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(GOOGLE_SCRIPT_URL, JSON.stringify(payload));
+  }
+});
 
 // ---- Render engine ----
 const app = document.getElementById("app");
@@ -239,12 +306,21 @@ function renderIntro() {
     <div class="intro">
       <h1>CivicBridge Feature Prioritization</h1>
       <div class="product-overview">
-        CivicBridge is a write-once, publish-everywhere communications tool for municipal governments. Staff enter a core message once and the system generates channel-ready versions for social media, email, press releases, website pages, and print materials, so residents stay informed without adding hours to already-stretched teams.
+        We're developing CivicBridge, a write-once, publish-everywhere communications tool designed for municipal governments. The idea is simple: staff enter a core message once and the system generates channel-ready versions for social media, email, press releases, website pages, and print materials, so residents stay informed without adding hours to already-stretched teams.
       </div>
       <p class="subtitle">
-        We're exploring which capabilities should be part of this tool. For each feature below, you'll answer two questions: how you'd feel <em>with</em> the feature, and how you'd feel <em>without</em> it. There are no right or wrong answers.
+        We're still early, and we want to build this around the real needs of people like you. This survey is part of a UCLA Anderson Executive MBA capstone research project, and your input will directly shape which features are prioritized for development.
       </p>
-      <div class="feature-count">${FEATURES.length} features to evaluate</div>
+      <div class="before-you-begin">
+        <strong>Before you begin:</strong>
+        <ul>
+          <li>This takes about <strong>8 to 10 minutes</strong> (15 features, two quick questions each).</li>
+          <li>There are no right or wrong answers. We're looking for your honest gut reaction to each feature.</li>
+          <li>Your name is optional. Individual responses will not be shared publicly or attributed to you. All data is used for research purposes only.</li>
+          <li>You can navigate back and forth between features if you want to change an answer.</li>
+        </ul>
+      </div>
+      <p class="contact-line">If you have any questions about this survey, reach out to Natalie Thomas at <a href="mailto:natalie.thomas.2026@anderson.ucla.edu">natalie.thomas.2026@anderson.ucla.edu</a>.</p>
       <label class="name-label">Your name (optional)</label>
       <input class="name-input" id="nameInput" placeholder="e.g. Jane from Public Works" value="${esc(state.respondentName)}">
       <br>
@@ -339,10 +415,10 @@ function renderSurvey() {
 
   // Nav
   document.getElementById("prevBtn")?.addEventListener("click", () => {
-    if (state.currentFeature > 0) { state.currentFeature--; render(); }
+    if (state.currentFeature > 0) { autoSave(); state.currentFeature--; render(); }
   });
   document.getElementById("nextBtn")?.addEventListener("click", () => {
-    if (state.currentFeature < FEATURES.length - 1) { state.currentFeature++; render(); }
+    if (state.currentFeature < FEATURES.length - 1) { autoSave(); state.currentFeature++; render(); }
   });
   document.getElementById("submitBtn")?.addEventListener("click", () => {
     if (countAnswered() < FEATURES.length) return;
@@ -353,6 +429,7 @@ function renderSurvey() {
   document.getElementById("dotRow").addEventListener("click", e => {
     const dot = e.target.closest("[data-idx]");
     if (!dot) return;
+    autoSave();
     state.currentFeature = parseInt(dot.dataset.idx);
     render();
   });
@@ -444,25 +521,12 @@ async function submitToGoogleSheets() {
   state.submitting = true;
   render();
 
-  const results = getClassifiedResults();
-  const payload = {
-    respondent: state.respondentName,
-    features: FEATURES.map(f => {
-      const match = results.find(r => r.id === f.id);
-      return {
-        id: f.id,
-        name: f.name,
-        functional: match?.functional || "",
-        dysfunctional: match?.dysfunctional || "",
-        category: match ? CATEGORY_META[match.category]?.label || match.category : "",
-      };
-    }),
-  };
+  const payload = buildPayload("complete");
 
   try {
     await fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",  // Apps Script doesn't support CORS, but the POST still lands
+      mode: "no-cors",
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify(payload),
     });
